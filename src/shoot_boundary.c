@@ -33,14 +33,14 @@ static int dirichlet_factor(mwSignedIndex i, mwSize m, int diag)
 /* Sliding (Neumann & Dirichlet) boundary condition -- factor */
 static int sliding_factor(mwSignedIndex i, mwSize m, int diag)
 {
-    if diag
+    if(diag)
         return(bperiod(i,m) % 2 ? -1 : 1);
     else
         return(1);
 }
 
 mwSignedIndex (*bound)()        = circulant_boundary;
-mwSignedIndex (*bound_factor)() = neumann_circulant_factor;
+int           (*bound_factor)() = neumann_circulant_factor;
 static int bound_type = BOUND_CIRCULANT;
 
 void set_bound(int t)
@@ -52,14 +52,17 @@ void set_bound(int t)
         bound_factor = neumann_circulant_factor;
     }
     else if (t==BOUND_NEUMANN)
+    {
         bound = neumann_dirichlet_boundary;
         bound_factor = neumann_circulant_factor;
     }
     else if (t==BOUND_DIRICHLET)
+    {
         bound = neumann_dirichlet_boundary;
         bound_factor = dirichlet_factor;
     }
     else if (t==BOUND_SLIDING)
+    {
         bound = neumann_dirichlet_boundary;
         bound_factor = neumann_circulant_factor;
     }
