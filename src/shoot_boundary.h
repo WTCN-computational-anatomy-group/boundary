@@ -7,7 +7,7 @@
 #define BOUND_SLIDING   3
 
 extern mwSignedIndex (*bound)();
-extern mwSignedIndex (*bound_factor)();
+extern int (*bound_factor)();
 extern void set_bound(int t);
 extern int  get_bound();
 extern mwSignedIndex bperiod(mwSignedIndex i, mwSize m);

@@ -334,16 +334,26 @@ double sumsq(mwSize dm[], float a[], float b[], double s[], float u[])
     for(k=0; k<dm[2]; k++)
     {
         mwSignedIndex j, km2,km1,kp1,kp2;
+        int fkm2, fkm1, fkp2, fkp1, gkm2, gkm1, gkp2, gkp1;
+        
         km2 = (bound(k-2,dm[2])-k)*dm[0]*dm[1];
         km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
         kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
         kp2 = (bound(k+2,dm[2])-k)*dm[0]*dm[1];
+        fkm1 = bound_factor(k-1, dm[2], 1);
+        fkm2 = bound_factor(k-2, dm[2], 1);
+        fkp1 = bound_factor(k+1, dm[2], 1);
+        fkp2 = bound_factor(k+2, dm[2], 1);
+        gkm1 = bound_factor(k-1, dm[2], 0);
+        gkm2 = bound_factor(k-2, dm[2], 0);
+        gkp1 = bound_factor(k+1, dm[2], 0);
+        gkp2 = bound_factor(k+2, dm[2], 0);
 
         for(j=0; j<dm[1]; j++)
         {
             float *pux, *puy, *puz, *pbx, *pby, *pbz, *paxx, *payy, *pazz, *paxy, *paxz, *payz;
             mwSignedIndex i, jm2,jm1,jp1,jp2;
-            int fjm2, fjm1, fkm2, fkm1;
+            int fjm2, fjm1, fjp2, fjp1, gjm2, gjm1, gjp2, gjp1;
 
             pux  = u+dm[0]*(j+dm[1]*k);
             puy  = u+dm[0]*(j+dm[1]*(k+dm[2]));
@@ -373,24 +383,16 @@ double sumsq(mwSize dm[], float a[], float b[], double s[], float u[])
             fjm2 = bound_factor(j-2, dm[1], 1);
             fjp1 = bound_factor(j+1, dm[1], 1);
             fjp2 = bound_factor(j+2, dm[1], 1);
-            fkm1 = bound_factor(k-1, dm[2], 1);
-            fkm2 = bound_factor(k-2, dm[2], 1);
-            fkp1 = bound_factor(k+1, dm[2], 1);
-            fkp2 = bound_factor(k+2, dm[2], 1);
             // 2) Off-Diagonal convolution
             gjm1 = bound_factor(j-1, dm[1], 0);
             gjm2 = bound_factor(j-2, dm[1], 0);
             gjp1 = bound_factor(j+1, dm[1], 0);
             gjp2 = bound_factor(j+2, dm[1], 0);
-            gkm1 = bound_factor(k-1, dm[2], 0);
-            gkm2 = bound_factor(k-2, dm[2], 0);
-            gkp1 = bound_factor(k+1, dm[2], 0);
-            gkp2 = bound_factor(k+2, dm[2], 0);
 
             for(i=0; i<dm[0]; i++)
             {
                 mwSignedIndex im2,im1,ip1,ip2;
-                int fim1, fim2, fip1, fip2;
+                int fim1, fim2, fip1, fip2, gim1, gim2, gip1, gip2;
                 float *px = pux+i, *py = puy+i, *pz = puz+i;
                 double tmp, abx, aby, abz, c;
 
@@ -398,11 +400,11 @@ double sumsq(mwSize dm[], float a[], float b[], double s[], float u[])
                 im1 = bound(i-1,dm[0])-i;
                 ip1 = bound(i+1,dm[0])-i;
                 ip2 = bound(i+2,dm[0])-i;
-                fim1 = bound_factor(i-1, dm[0], 1;
+                fim1 = bound_factor(i-1, dm[0], 1);
                 fim2 = bound_factor(i-2, dm[0], 1);
                 fip1 = bound_factor(i+1, dm[0], 1);
                 fip2 = bound_factor(i+2, dm[0], 1);
-                gim1 = bound_factor(i-1, dm[0], 0;
+                gim1 = bound_factor(i-1, dm[0], 0);
                 gim2 = bound_factor(i-2, dm[0], 0);
                 gip1 = bound_factor(i+1, dm[0], 0);
                 gip2 = bound_factor(i+2, dm[0], 0);
@@ -546,7 +548,7 @@ void vel2mom_le(mwSize dm[], float f[], double s[], float g[])
     for(k=0; k<dm[2]; k++)
     {
         mwSignedIndex j, km1, kp1;
-        int fkm1, fkp1;
+        int fkm1, fkp1, gkm1, gkp1;
         km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1]; // Wrap/mirror outside domain
         kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
         fkm1 = bound_factor(k-1, dm[2], 1); // Factor if sliding/dircihlet
@@ -557,7 +559,7 @@ void vel2mom_le(mwSize dm[], float f[], double s[], float g[])
         for(j=0; j<dm[1]; j++)
         {
             mwSignedIndex i, jm1, jp1;
-            int fjm1, fjp1;
+            int fjm1, fjp1, gjm1, gjp1;
             float *pgx, *pgy, *pgz, *pfx, *pfy, *pfz;
 
             // Pointers to output momentum volume
@@ -580,7 +582,7 @@ void vel2mom_le(mwSize dm[], float f[], double s[], float g[])
             for(i=0; i<dm[0]; i++)
             {
                 mwSignedIndex im1, ip1;
-                int fim1, fip1;
+                int fim1, fip1, gim1, gip1;
                 float *px = &pfx[i],    //< vx(i,j,k)
                       *py = &pfy[i],    //< vy(i,j,k)
                       *pz = &pfz[i];    //< vz(i,j,k)
@@ -621,7 +623,7 @@ void vel2mom_le(mwSize dm[], float f[], double s[], float g[])
                 // uz = lzx (*) vx + lzy (*) vy + lzz (*) vz
                 c      = pz[0];
                 pgz[i] = lam0/v2*c
-                       + wz100*((gip1*pz[ip1]-c) + (gi1*pz[im1]-c))
+                       + wz100*((gip1*pz[ip1]-c) + (gim1*pz[im1]-c))
                        + wz010*((gjp1*pz[jp1]-c) + (gjm1*pz[jm1]-c))
                        + wz001*((fkp1*pz[kp1]-c) + (fkm1*pz[km1]-c))
                        + w2   *(gkp1*fim1*px[kp1+im1] - gkp1*fip1*px[kp1+ip1] + 
@@ -723,7 +725,7 @@ void relax_le(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
         for(k=it&1; k<dm[2]; k+=2) // Z loop
         {
             mwSignedIndex j, km1, kp1;
-            int fkm1, fkp1;
+            int fkm1, fkp1, gkm1, gkp1;
             km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
             kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
             fkm1 = bound_factor(k-1, dm[2], 1); // Factor if sliding
@@ -735,7 +737,7 @@ void relax_le(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
             {
                 float *pux, *puy, *puz, *pbx, *pby, *pbz, *paxx, *payy, *pazz, *paxy, *paxz, *payz;
                 mwSignedIndex i, jm1,jp1;
-                int fjm1, fjp1;
+                int fjm1, fjp1, gjm1, gjp1;
 
                 // pu <- Get slice of previous guess of the solution (:,j,k)
                 pux  = u+dm[0]*(j+dm[1]* k);
@@ -767,7 +769,7 @@ void relax_le(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
                 for(i=(it>>2)&1; i<dm[0]; i+=2) // X loop
                 {
                     mwSignedIndex im1,ip1;
-                    int fim1, fip1;
+                    int fim1, fip1, gim1, gip1;
                     double sux, suy, suz;
                     // p <- Get previous guess of the solution at (i,j,k)
                     float *px = pux+i, *py = puy+i, *pz = puz+i;
@@ -867,7 +869,8 @@ void Atimesp_le(mwSize dm[], float A[], double param[], float p[], float Ap[])
 void vel2mom_me(mwSize dm[], float f[], double s[], float g[])
 {
     mwSignedIndex i, j, k, km1,kp1, jm1,jp1, im1,ip1;
-    int fkm1, fkp1, fjm1, fjp1, fim1, fip1;
+    int fkm1, fkp1, fjm1, fjp1, fim1, fip1, 
+        gkm1, gkp1, gjm1, gjp1, gim1, gip1;
     float *pgx, *pgy, *pgz, *pfx, *pfy, *pfz;
     double w000,w001,w010,w100;
     double lam0 = s[3], lam1 = s[4];
@@ -972,7 +975,7 @@ void relax_me(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
         for(k=0; k<dm[2]; k++)
         {
             mwSignedIndex km1, kp1;
-            int fkm1, fkp1;
+            int fkm1, fkp1, gkm1, gkp1;
             km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
             kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
             fkm1 = bound_factor(k-1, dm[2], 1); // Factor if sliding
@@ -985,7 +988,7 @@ void relax_me(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
             {
                 float *pux, *puy, *puz, *pbx, *pby, *pbz, *paxx, *paxy, *payy, *paxz, *payz, *pazz;
                 mwSignedIndex jm1,jp1, im1,ip1;
-                int fjm1, fjp1, fim1, fip1;
+                int fjm1, fjp1, fim1, fip1, gjm1, gjp1, gim1, gip1;
 
                 pux  = u+dm[0]*(j+dm[1]*k);
                 puy  = u+dm[0]*(j+dm[1]*(k+dm[2]));
@@ -1146,7 +1149,7 @@ void vel2mom_be(mwSize dm[], float f[], double s[], float g[])
     for(k=0; k<dm[2]; k++)
     {
         mwSignedIndex j, km2,km1,kp1,kp2;
-        int fkm1, fkm2, fkp1, fkp2;
+        int fkm1, fkm2, fkp1, fkp2, gkm1, gkm2, gkp1, gkp2;
         km2 = (bound(k-2,dm[2])-k)*dm[0]*dm[1];
         km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
         kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
@@ -1163,7 +1166,7 @@ void vel2mom_be(mwSize dm[], float f[], double s[], float g[])
         for(j=0; j<dm[1]; j++)
         {
             mwSignedIndex i, jm2,jm1,jp1,jp2;
-            int fjm1, fjm2, fjp1, fjp2;
+            int fjm1, fjm2, fjp1, fjp2, gjm1, gjm2, gjp1, gjp2;
             float *pgx, *pgy, *pgz, *pfx, *pfy, *pfz;
 
             pgx = g+dm[0]*(j+dm[1]*k);
@@ -1190,7 +1193,7 @@ void vel2mom_be(mwSize dm[], float f[], double s[], float g[])
             for(i=0; i<dm[0]; i++)
             {
                 mwSignedIndex im2,im1,ip1,ip2;
-                int fim1, fim2, fip1, fip2;
+                int fim1, fim2, fip1, fip2, gim1, gim2, gip1, gip2;
                 float *px = &pfx[i], *py = &pfy[i], *pz = &pfz[i];
                 double c;
 
@@ -1333,7 +1336,7 @@ void relax_be(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
         for(k=(it/9)%3; k<dm[2]; k+=3)
         {
             mwSignedIndex km2, km1, kp1, kp2;
-            int fkm1, fkm2, fkp1, fkp2;
+            int fkm1, fkm2, fkp1, fkp2, gkm1, gkm2, gkp1, gkp2;
             km2 = (bound(k-2,dm[2])-k)*dm[0]*dm[1];
             km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
             kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
@@ -1351,7 +1354,7 @@ void relax_be(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
             {
                 float *pux, *puy, *puz, *pbx, *pby, *pbz, *paxx, *payy, *pazz, *paxy, *paxz, *payz;
                 mwSignedIndex jm2,jm1,jp1,jp2;
-                int fjm1, fjm2, fjp1, fjp2;
+                int fjm1, fjm2, fjp1, fjp2, gjm1, gjm2, gjp1, gjp2;
 
                 pux  = u+dm[0]*(j+dm[1]* k);
                 puy  = u+dm[0]*(j+dm[1]*(k+dm[2]));
@@ -1386,7 +1389,7 @@ void relax_be(mwSize dm[], float a[], float b[], double s[], int nit, float u[])
                 for(i=it%3; i<dm[0]; i+=3)
                 {
                     mwSignedIndex im2,im1,ip1,ip2;
-                    int fim1, fim2, fip1, fip2;
+                    int fim1, fim2, fip1, fip2, gim1, gim2, gip1, gip2;
                     double sux, suy, suz, c;
                     float *px = pux+i, *py = puy+i, *pz = puz+i;
 
@@ -1564,7 +1567,7 @@ void vel2mom_all(mwSize dm[], float f[], double s[], float g[])
     for(k=0; k<dm[2]; k++)
     {
         mwSignedIndex j, km2,km1,kp1,kp2;
-        int fkm1, fkm2, fkp1, fkp2;
+        int fkm1, fkm2, fkp1, fkp2, gkm1, gkm2, gkp1, gkp2;
         km2 = (bound(k-2,dm[2])-k)*dm[0]*dm[1];
         km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
         kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
@@ -1581,7 +1584,7 @@ void vel2mom_all(mwSize dm[], float f[], double s[], float g[])
         for(j=0; j<dm[1]; j++)
         {
             mwSignedIndex i, jm2,jm1,jp1,jp2;
-            int fjm1, fjm2, fjp1, fjp2;
+            int fjm1, fjm2, fjp1, fjp2, gjm1, gjm2, gjp1, gjp2;
             float *pgx, *pgy, *pgz, *pfx, *pfy, *pfz;
 
             pgx = g+dm[0]*(j+dm[1]*k);
@@ -1608,7 +1611,7 @@ void vel2mom_all(mwSize dm[], float f[], double s[], float g[])
             for(i=0; i<dm[0]; i++)
             {
                 mwSignedIndex im2,im1,ip1,ip2;
-                int fim1, fim2, fip1, fip2;
+                int fim1, fim2, fip1, fip2, gim1, gim2, gip1, gip2;
                 float *px = &pfx[i], *py = &pfy[i], *pz = &pfz[i];
                 double c;
 
@@ -1798,7 +1801,7 @@ void relax_all(mwSize dm[], float a[], float b[], double s[], int nit, float u[]
         for(k=(it/9)%3; k<dm[2]; k+=3)
         {
             mwSignedIndex km2, km1, kp1, kp2;
-            int fkm1, fkm2, fkp1, fkp2;
+            int fkm1, fkm2, fkp1, fkp2, gkm1, gkm2, gkp1, gkp2;
             km2 = (bound(k-2,dm[2])-k)*dm[0]*dm[1];
             km1 = (bound(k-1,dm[2])-k)*dm[0]*dm[1];
             kp1 = (bound(k+1,dm[2])-k)*dm[0]*dm[1];
@@ -1816,7 +1819,7 @@ void relax_all(mwSize dm[], float a[], float b[], double s[], int nit, float u[]
             {
                 float *pux, *puy, *puz, *pbx, *pby, *pbz, *paxx, *payy, *pazz, *paxy, *paxz, *payz;
                 mwSignedIndex jm2,jm1,jp1,jp2;
-                int fjm1, fjm2, fjp1, fjp2;
+                int fjm1, fjm2, fjp1, fjp2, gjm1, gjm2, gjp1, gjp2;
 
                 pux  = u+dm[0]*(j+dm[1]* k);
                 puy  = u+dm[0]*(j+dm[1]*(k+dm[2]));
@@ -1851,7 +1854,7 @@ void relax_all(mwSize dm[], float a[], float b[], double s[], int nit, float u[]
                 for(i=it%3; i<dm[0]; i+=3)
                 {
                     mwSignedIndex im2,im1,ip1,ip2;
-                    int fim1, fim2, fip1, fip2;
+                    int fim1, fim2, fip1, fip2, gim1, gim2, gip1, gip2;
                     double sux, suy, suz, c;
                     float *px = pux+i, *py = puy+i, *pz = puz+i;
 
