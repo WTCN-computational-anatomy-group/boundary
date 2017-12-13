@@ -19,28 +19,28 @@ static mwSignedIndex circulant_boundary(mwSignedIndex i, mwSize m)
 }
 
 /* Neuman/Circulant boundary condition -- factor */
-static int neumann_circulant_factor(mwSignedIndex i, mwSize m, int diag)
+static float neumann_circulant_factor(mwSignedIndex i, mwSize m, int diag)
 {
-    return(1);
+    return(1.);
 }
 
 /* Dirichlet boundary condition -- factor */
-static int dirichlet_factor(mwSignedIndex i, mwSize m, int diag)
+static float dirichlet_factor(mwSignedIndex i, mwSize m, int diag)
 {
-    return(bperiod(i,m) % 2 ? -1 : 1);
+    return(bperiod(i,m) % 2 ? -1. : 1.);
 }
 
 /* Sliding (Neumann & Dirichlet) boundary condition -- factor */
-static int sliding_factor(mwSignedIndex i, mwSize m, int diag)
+static float sliding_factor(mwSignedIndex i, mwSize m, int diag)
 {
     if(diag)
-        return(bperiod(i,m) % 2 ? -1 : 1);
+        return(bperiod(i,m) % 2 ? -1. : 1.);
     else
-        return(1);
+        return(1.);
 }
 
 mwSignedIndex (*bound)()        = circulant_boundary;
-int           (*bound_factor)() = neumann_circulant_factor;
+float         (*bound_factor)() = neumann_circulant_factor;
 static int bound_type = BOUND_CIRCULANT;
 
 void set_bound(int t)
