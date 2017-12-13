@@ -77,7 +77,7 @@ int get_bound()
 
 mwSignedIndex bperiod(mwSignedIndex i, mwSize m)
 {
-    return(i > 0 ? i/m : (i+1)/m - 1);
+    return(i >= 0 ? i/m : (i+1)/m - 1);
 }
 
 
