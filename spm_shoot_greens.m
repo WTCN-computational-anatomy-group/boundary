@@ -26,6 +26,9 @@ function varargout = spm_shoot_greens(varargin)
 %________________________________________________________
 % (c) Wellcome Trust Centre for NeuroImaging (2012)
 
+% Reference for symmetric convolution (i.e. which DCT/DST order to use):
+% https://en.wikipedia.org/wiki/Symmetric_convolution
+
 % John Ashburner
 % $Id: spm_shoot_greens.m 7054 2017-04-04 12:09:32Z john $
 
@@ -43,25 +46,17 @@ if isa(varargin{1},'char') && strcmp(varargin{1},'kernel'),
         case 0   % Circulant
             % The differential operator is symmetric, so the Fourier 
             % transform should be real
-            dtd = @(a, dim) real(fft(a, [], dim));
-            dto = @(a, dim) real(fft(a, [], dim));
-        case 1   % Neumann
-            dtd = @(a, dim) dctr(a, dim, 'Type', 1);
-            dto = @(a, dim) dctr(a, dim, 'Type', 1);
-        case 2   % Dirichlet
-            dtd = @(a, dim) dstr(a, dim, 'Type', 1);
-            dto = @(a, dim) dstr(a, dim, 'Type', 1);
-        case 3   % Sliding
-            dtd = @(a, dim) dstr(a, dim, 'Type', 1);
-            dto = @(a, dim) dctr(a, dim, 'Type', 1);
+            dt = @(a, dim) real(fft(a, [], dim));
+        case {1,2,3}   % Neumann/Dirichlet/Sliding
+            dt = @(a, dim) dctr(a, dim, 'Type', 2);
         otherwise
             error('Boundary type %d does not exist. Should be in 0..3', bnd);
     end
 
     F = spm_diffeo('kernel',d,prm);
-    if size(F,4) == 1 && (bnd == 0 || bnd == 1 || bnd == 2),
+    if size(F,4) == 1
         % Diagonal and off-diagonal conditions are the same
-        F = dtd(dtd(dtd(F,1),2),3);
+        F = dt(dt(dt(F,1),2),3);
         sm = numel(F);
         if nargout >=2
             ld = log(F);
@@ -76,27 +71,10 @@ if isa(varargin{1},'char') && strcmp(varargin{1},'kernel'),
            ld = 3*ld + sm*sum(2*log(prm(1:3)));
         end
     else
-        if size(F, 4) == 1,
-            % Same convolution operator for each component, but with 
-            % different boundary conditions.
-            G = F;
-            lat = [size(F) 1];
-            F = zeros([lat(1:3) 3 3], 'like', G);
-            F(:,:,:,1,1) = dto(dto(dtd(G,1),2),3);
-            F(:,:,:,1,2) = dto(dtd(dto(G,1),2),3);
-            F(:,:,:,1,3) = dtd(dto(dto(G,1),2),3);
-            clear G
-            for i=2:size(F,4),
-                F(:,:,:,i,1) = F(:,:,:,1,1);
-                F(:,:,:,i,2) = F(:,:,:,1,2);
-                F(:,:,:,i,3) = F(:,:,:,1,3);
-            end
-        else
-            for i=1:size(F,4),
-                F(:,:,:,i,1) = dto(dto(dtd(F(:,:,:,i,1),1),2),3);
-                F(:,:,:,i,2) = dto(dtd(dto(F(:,:,:,i,2),1),2),3);
-                F(:,:,:,i,3) = dtd(dto(dto(F(:,:,:,i,3),1),2),3);
-            end
+        for i=1:size(F,4),
+            F(:,:,:,i,1) = dt(dt(dt(F(:,:,:,i,1),1),2),3);
+            F(:,:,:,i,2) = dt(dt(dt(F(:,:,:,i,2),1),2),3);
+            F(:,:,:,i,3) = dt(dt(dt(F(:,:,:,i,3),1),2),3);
         end
         ld = 0;
         sm = 0;
@@ -150,18 +128,18 @@ else
         case 1   % Neumann
             dtd = @(a, dim) dctr(a, dim, 'Type', 2);
             dto = @(a, dim) dctr(a, dim, 'Type', 2);
-            itd = @(a, dim) idctr(a, dim, 'Type', 2);
-            ito = @(a, dim) idctr(a, dim, 'Type', 2);
+            itd = @(a, dim) idctr(a, dim, 'Type', 1);
+            ito = @(a, dim) idctr(a, dim, 'Type', 1);
         case 2   % Dirichlet
             dtd = @(a, dim) dstr(a, dim, 'Type', 2);
             dto = @(a, dim) dstr(a, dim, 'Type', 2);
-            itd = @(a, dim) idstr(a, dim, 'Type', 2);
-            ito = @(a, dim) idstr(a, dim, 'Type', 2);
+            itd = @(a, dim) idstr(a, dim, 'Type', 1);
+            ito = @(a, dim) idstr(a, dim, 'Type', 1);
         case 3   % Sliding
             dtd = @(a, dim) dstr(a, dim, 'Type', 2);
             dto = @(a, dim) dctr(a, dim, 'Type', 2);
-            itd = @(a, dim) idstr(a, dim, 'Type', 2);
-            ito = @(a, dim) idctr(a, dim, 'Type', 2);
+            itd = @(a, dim) idstr(a, dim, 'Type', 1);
+            ito = @(a, dim) idctr(a, dim, 'Type', 1);
         otherwise
             error('Boundary type %d does not exist. Should be in 0..3', bnd);
     end
@@ -197,7 +175,7 @@ end
 
 %__________________________________________________________________________________
 
-% Robust DCT/DST that work with sices
+% Robust DCT/DST that work with slices
 
 function a = dctr(a, dim, varargin)
     if size(a, dim) > 1
