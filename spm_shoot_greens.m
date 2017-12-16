@@ -46,9 +46,10 @@ if isa(varargin{1},'char') && strcmp(varargin{1},'kernel'),
         case 0   % Circulant
             % The differential operator is symmetric, so the Fourier 
             % transform should be real
-            dt = @(a, dim) real(fft(a, [], dim));
+            dt = @(a, dim) real(fftn(a));
         case {1,2,3}   % Neumann/Dirichlet/Sliding
-            dt = @(a, dim) dctr(a, dim, 'Type', 2);
+            dt1 = @(a, dim) dctr(a, dim, 'Type', 2);
+            dt  = @(a) dt1(dt1(dt1(a,1),2),3);
         otherwise
             error('Boundary type %d does not exist. Should be in 0..3', bnd);
     end
@@ -56,7 +57,7 @@ if isa(varargin{1},'char') && strcmp(varargin{1},'kernel'),
     F = spm_diffeo('kernel',d,prm);
     if size(F,4) == 1
         % Diagonal and off-diagonal conditions are the same
-        F = dt(dt(dt(F,1),2),3);
+        F = dt(F);
         sm = numel(F);
         if nargout >=2
             ld = log(F);
@@ -72,9 +73,9 @@ if isa(varargin{1},'char') && strcmp(varargin{1},'kernel'),
         end
     else
         for i=1:size(F,4),
-            F(:,:,:,i,1) = dt(dt(dt(F(:,:,:,i,1),1),2),3);
-            F(:,:,:,i,2) = dt(dt(dt(F(:,:,:,i,2),1),2),3);
-            F(:,:,:,i,3) = dt(dt(dt(F(:,:,:,i,3),1),2),3);
+            F(:,:,:,i,1) = dt(F(:,:,:,i,1));
+            F(:,:,:,i,2) = dt(F(:,:,:,i,2));
+            F(:,:,:,i,3) = dt(F(:,:,:,i,3));
         end
         ld = 0;
         sm = 0;
@@ -126,20 +127,20 @@ else
             itd = @(a, dim) ifft(a, [], dim, 'symmetric');
             ito = @(a, dim) ifft(a, [], dim, 'symmetric');
         case 1   % Neumann
-            dtd = @(a, dim) dctr(a, dim, 'Type', 2);
-            dto = @(a, dim) dctr(a, dim, 'Type', 2);
-            itd = @(a, dim) idctr(a, dim, 'Type', 1);
-            ito = @(a, dim) idctr(a, dim, 'Type', 1);
+            dtd = @(a, dim) dctr(a, dim, 'Type', 1);
+            dto = @(a, dim) dctr(a, dim, 'Type', 1);
+            itd = @(a, dim) idctr(a, dim, 'Type', 2);
+            ito = @(a, dim) idctr(a, dim, 'Type', 2);
         case 2   % Dirichlet
-            dtd = @(a, dim) dstr(a, dim, 'Type', 2);
-            dto = @(a, dim) dstr(a, dim, 'Type', 2);
-            itd = @(a, dim) idstr(a, dim, 'Type', 1);
-            ito = @(a, dim) idstr(a, dim, 'Type', 1);
+            dtd = @(a, dim) dstr(a, dim, 'Type', 1);
+            dto = @(a, dim) dstr(a, dim, 'Type', 1);
+            itd = @(a, dim) idstr(a, dim, 'Type', 2);
+            ito = @(a, dim) idstr(a, dim, 'Type', 2);
         case 3   % Sliding
-            dtd = @(a, dim) dstr(a, dim, 'Type', 2);
-            dto = @(a, dim) dctr(a, dim, 'Type', 2);
-            itd = @(a, dim) idstr(a, dim, 'Type', 1);
-            ito = @(a, dim) idctr(a, dim, 'Type', 1);
+            dtd = @(a, dim) dstr(a, dim, 'Type', 1);
+            dto = @(a, dim) dctr(a, dim, 'Type', 1);
+            itd = @(a, dim) idstr(a, dim, 'Type', 2);
+            ito = @(a, dim) idctr(a, dim, 'Type', 2);
         otherwise
             error('Boundary type %d does not exist. Should be in 0..3', bnd);
     end
@@ -148,27 +149,45 @@ else
     if size(F,4) == 1,
         % Simple case where convolution is done one field at a time
         prm = varargin{3};
-        v(:,:,:,1) = ito(ito(itd(F.*dto(dto(dtd(m(:,:,:,1),1),2),3)*prm(1)^2,1),2),3);
-        v(:,:,:,2) = ito(itd(ito(F.*dto(dtd(dto(m(:,:,:,2),1),2),3)*prm(2)^2,1),2),3);
-        v(:,:,:,3) = itd(ito(ito(F.*dtd(dto(dto(m(:,:,:,3),1),2),3)*prm(3)^2,1),2),3);
+        if bnd == 0
+            for i=1:3,
+                v(:,:,:,i) = ifftn(F.*fftn(m(:,:,:,i))*prm(i)^2,'symmetric');
+            end
+        else
+            v(:,:,:,1) = ito(ito(itd(F.*dto(dto(dtd(m(:,:,:,1),1),2),3)*prm(1)^2,1),2),3);
+            v(:,:,:,2) = ito(itd(ito(F.*dto(dtd(dto(m(:,:,:,2),1),2),3)*prm(2)^2,1),2),3);
+            v(:,:,:,3) = itd(ito(ito(F.*dtd(dto(dto(m(:,:,:,3),1),2),3)*prm(3)^2,1),2),3);
+        end
     else
         % More complicated case for dealing with linear elasticity, where
         % convolution is not done one field at a time
-        m(:,:,:,1) = dto(dto(dtd(m(:,:,:,1),1),2),3);
-        m(:,:,:,2) = dto(dtd(dto(m(:,:,:,2),1),2),3);
-        m(:,:,:,3) = dtd(dto(dto(m(:,:,:,3),1),2),3);
-        for k=1:size(m,3),
-            a = m(:,:,k,:);
-            m(:,:,k,:) = 0;
-            for j=1:3,
-                for i=1:3,
-                    m(:,:,k,j) = m(:,:,k,j) + F(:,:,k,j,i).*a(:,:,:,i);
+        if bnd == 0
+            for i=1:3,
+                m(:,:,:,i) = fftn(m(:,:,:,i));
+            end
+        else
+            m(:,:,:,1) = dto(dto(dtd(m(:,:,:,1),1),2),3);
+            m(:,:,:,2) = dto(dtd(dto(m(:,:,:,2),1),2),3);
+            m(:,:,:,3) = dtd(dto(dto(m(:,:,:,3),1),2),3);
+        end
+        for j=1:3,
+            a = single(0);
+            for i=1:3,
+                a = a + F(:,:,:,j,i).*m(:,:,:,i);
+            end
+            if bnd == 0
+                v(:,:,:,j) = ifftn(a,'symmetric');
+            else
+                switch j
+                    case 1
+                        v(:,:,:,1) = ito(ito(itd(a,1),2),3);
+                    case 2
+                        v(:,:,:,2) = ito(itd(ito(a,1),2),3);
+                    case 3
+                        v(:,:,:,3) = itd(ito(ito(a,1),2),3);
                 end
             end
         end
-        v(:,:,:,1) = ito(ito(itd(m(:,:,:,1),1),2),3);
-        v(:,:,:,2) = ito(itd(ito(m(:,:,:,2),1),2),3);
-        v(:,:,:,3) = itd(ito(ito(m(:,:,:,3),1),2),3);
     end
     varargout{1} = v;
 end
@@ -185,7 +204,8 @@ function a = dctr(a, dim, varargin)
 
 function a = dstr(a, dim, varargin)
     if size(a, dim) > 1
-        a = dst(a, [], dim, varargin{:});
+        a = dstn(a, dim);
+%         a = dstn(a, dim, varargin{:});
     end
 
 
@@ -197,5 +217,6 @@ function a = idctr(a, dim, varargin)
 
 function a = idstr(a, dim, varargin)
     if size(a, dim) > 1
-        a = idst(a, [], dim, varargin{:});
+%         a = idstn(a, dim, varargin{:});
+        a = idstn(a, dim);
     end
